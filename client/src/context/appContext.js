@@ -1,4 +1,4 @@
-import React, { useReducer, useContext } from "react";
+import React, { useReducer, useContext, useEffect } from "react";
 import reducer from "./reducer";
 import {
     DISPLAY_ALERT,
@@ -31,28 +31,33 @@ import {
     EDIT_JOB_SUCCESS,
     SHOW_STATS_BEGIN,
     SHOW_STATS_SUCCESS,
-    CLEAR_FILTERS
+    CLEAR_FILTERS,
+    CHANGE_PAGE,
+    GET_CURRENT_USER_BEGIN,
+    GET_CURRENT_USER_SUCCESS,
 } from "./action";
 import axios from "axios";
 
+/*
 const token = localStorage.getItem("token");
 const user = localStorage.getItem("user");
 const location = localStorage.getItem("location");
+*/
 
 const initialState = {
+    userLoading: true,
     isLoading: false,
     showAlert: false,
     alertText: "",
     alertType: "",
-    user: user === "undefined" ? null : JSON.parse(user),
-    token: token,
+    user: null,
     showSidebar: false,
-    userLocation: location || "",
+    userLocation: "",
     isEditing: false,
     editJobId: "",
     position: "",
     company: "",
-    jobLocation: location || "",
+    jobLocation: "",
     jobTypeOptions: ["full-time", "part-time", "remote", "internship"],
     jobType: "full-time",
     statusOptions: ["interview", "declined", "pending"],
@@ -83,15 +88,19 @@ const AppProvider = ({ children }) => {
     });
 
     // For request
+    /*
     authFetch.interceptors.request.use((config) => {
         config.headers["Authorization"] = "Bearer " + state.token;
         return config;
     }, (error) => {
         return Promise.reject(error);
     });
+    */
 
     // For response
+    
     authFetch.interceptors.response.use((response) => {
+        console.log(response);
         return response;
     }, (error) => {
         console.log(error.response);
@@ -100,6 +109,7 @@ const AppProvider = ({ children }) => {
         }
         return Promise.reject(error);
     });
+    
 
     const displayAlert = () => {
         dispatch({ type: DISPLAY_ALERT });
@@ -113,6 +123,7 @@ const AppProvider = ({ children }) => {
             })
         }, 3000);
     }
+    /*
     const addUsertoLocalStorage = ({ user, token, location }) => {
 
         localStorage.setItem("user", JSON.stringify(user));
@@ -125,6 +136,7 @@ const AppProvider = ({ children }) => {
         localStorage.removeItem("token");
         localStorage.removeItem("location");
     }
+    */
 
     const registerUser = async (currentUser) => {
         dispatch({ type: REGISTER_USER_BEGIN });
@@ -136,7 +148,7 @@ const AppProvider = ({ children }) => {
             console.log(location);
             console.log(user);
             console.log(token);
-            addUsertoLocalStorage({ user, token, location });
+            //addUsertoLocalStorage({ user, token, location });
         } catch (error) {
             console.log(error.response);
             dispatch({ type: REGISTER_USER_ERROR, payload: { message: error.response.data.msg } })
@@ -153,7 +165,7 @@ const AppProvider = ({ children }) => {
             console.log(location);
             console.log(user);
             console.log(token);
-            addUsertoLocalStorage({ user, token, location });
+            //addUsertoLocalStorage({ user, token, location });
         } catch (error) {
             console.log(error.response);
             dispatch({ type: LOGIN_USER_ERROR, payload: { message: error.response.data.msg } })
@@ -165,9 +177,9 @@ const AppProvider = ({ children }) => {
         dispatch({ type: SETUP_USER_BEGIN });
         try {
             const { data } = await axios.post(`/api/v1/auth/${endPoint}`, currentUser);
-            const { user, token, location } = data;
-            dispatch({ type: SETUP_USER_SUCCESS, payload: { user, token, location, alertText } });
-            addUsertoLocalStorage({ user, token, location });
+            const { user, /*token,*/ location } = data;
+            dispatch({ type: SETUP_USER_SUCCESS, payload: { user,/* token,*/ location, alertText } });
+            //addUsertoLocalStorage({ user, token, location });
         } catch (error) {
             console.log(error.response);
             dispatch({ type: SETUP_USER_ERROR, payload: { message: error.response.data.msg } })
@@ -181,17 +193,17 @@ const AppProvider = ({ children }) => {
 
     const logoutUser = () => {
         dispatch({ type: LOGOUT_USER });
-        removeUserFromLocalStorage();
+        //removeUserFromLocalStorage();
     }
 
     const updateUser = async (currentUser) => {
         dispatch({ type: UPDATE_USER_BEGIN })
         try {
             const { data } = await authFetch.patch("/auth/updateUser", currentUser);
-            const { user, location, token } = data;
+            const { user, location /*, token*/ } = data;
 
-            dispatch({ type: UPDATE_USER_SUCCESS, payload: { user, location, token } });
-            addUsertoLocalStorage({ user, location, token });
+            dispatch({ type: UPDATE_USER_SUCCESS, payload: { user, location /*, token*/ } });
+            //addUsertoLocalStorage({ user, location, token });
         } catch (error) {
             if (error.response.status !== 401) {
                 dispatch({ type: UPDATE_USER_ERROR, payload: { message: error.response.data.message } });
@@ -230,8 +242,8 @@ const AppProvider = ({ children }) => {
     }
 
     const getJobs = async () => {
-        const {search, searchStatus, searchType, sort} = state;
-        let url = "/jobs?status=" + searchStatus + "&jobType=" + searchType + "&sort=" + sort;
+        const {page, search, searchStatus, searchType, sort} = state;
+        let url = "/jobs?page=" + page + "&status=" + searchStatus + "&jobType=" + searchType + "&sort=" + sort;
         if(search){
             url += "&search=" + search;
         }
@@ -250,7 +262,7 @@ const AppProvider = ({ children }) => {
                 }
             });
         } catch (error) {
-            console.log(error.response);
+            logoutUser();
         }
         clearAlert();
     }
@@ -282,8 +294,7 @@ const AppProvider = ({ children }) => {
             await authFetch.delete("/jobs/" + jobId)
             getJobs();
         } catch (error) {
-            console.log(error.response);
-            // logoutUser();
+            logoutUser();
         }
     }
 
@@ -296,7 +307,6 @@ const AppProvider = ({ children }) => {
             monthlyApplications: data.monthlyApplications,
            }});
         } catch (error) {
-            console.log(error.response);
             logoutUser();
         }
         clearAlert();
@@ -304,7 +314,29 @@ const AppProvider = ({ children }) => {
     const clearFilters = ()=>{
         dispatch({type: CLEAR_FILTERS});
     }
-    return <AppContext.Provider value={{ ...state, clearFilters, showStats, displayAlert, registerUser, loginUser, setupUser, toggleSidebar, logoutUser, updateUser, handleChange, clearValues, createJob, getJobs, setEditJob, deleteJob, editJob }}>
+    const changePage = (page) => {
+        dispatch({type:CHANGE_PAGE, payload:{page} })
+    }
+    const getCurrentUser = async ()=>{
+        dispatch({type: GET_CURRENT_USER_BEGIN});
+        try {
+            const {data} = await authFetch("/auth/getCurrentUser");
+            const {user, location} = data;
+            dispatch({
+                type: GET_CURRENT_USER_SUCCESS,
+                payload: {user, location}
+            })
+        } catch (error) {
+            if(error.response.status === 401) return;
+            logoutUser();
+        }
+    }
+
+    useEffect(()=>{
+        getCurrentUser();
+    },[]);
+
+    return <AppContext.Provider value={{ ...state, changePage, clearFilters, showStats, displayAlert, registerUser, loginUser, setupUser, toggleSidebar, logoutUser, updateUser, handleChange, clearValues, createJob, getJobs, setEditJob, deleteJob, editJob }}>
         {children}
     </AppContext.Provider>
 }

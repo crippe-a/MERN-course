@@ -10,7 +10,8 @@ const JobsContainer = () => {
     console.log("numberOfPages JobsContainer", numberOfPages);
     useEffect(() => {
         getJobs();
-    }, [search, searchStatus, searchType, sort]);
+        // eslint-disable-next-line
+    }, [page, search, searchStatus, searchType, sort]);
     if (isLoading){
         return <Loading center />;
     }
@@ -32,8 +33,6 @@ const JobsContainer = () => {
             </div>
             {/* Pagination buttons */}
             {numberOfPages > 1 && <PageBtnContainer/>}
-            <PageBtnContainer/>
-            
         </Wrapper>
     );
 }
