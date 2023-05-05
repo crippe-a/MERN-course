@@ -62,7 +62,7 @@ const reducer = (state, action) => {
         return {
             ...state,
             isLoading: false,
-            /*token: action.payload.token,*/
+            token: action.payload.token,
             user: action.payload.user,
             userLocation: action.payload.location,
             jobLocation: action.payload.location,
@@ -90,7 +90,7 @@ const reducer = (state, action) => {
         return {
             ...state,
             isLoading: false,
-            //token: action.payload.token,
+            token: action.payload.token,
             user: action.payload.user,
             userLocation: action.payload.location,
             jobLocation: action.payload.location,
@@ -130,7 +130,7 @@ const reducer = (state, action) => {
         return {
             ...state,
             isLoading: false,
-            //token: action.payload.token,
+            token: action.payload.token,
             user: action.payload.user,
             userLocation: action.payload.location,
             jobLocation: action.payload.location,
@@ -279,6 +279,7 @@ const reducer = (state, action) => {
         return {
           ...state,
           userLoading: false,
+          token: action.payload.token,
           user: action.payload.user,
           userLocation: action.payload.location,
           jobLocation: action.payload.location,
